@@ -1,0 +1,14 @@
+{
+  "name": "zia-billing-portal",
+  "version": "1.0.0",
+  "description": "Standalone hosted-payment-page server for Zia-Billing, deployable independently of the desktop app.",
+  "main": "server.cjs",
+  "scripts": {
+    "start": "node server.cjs"
+  },
+  "dependencies": {
+    "sql.js": "^1.15.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-electron/
+*.zip
+server/data.db
+*.db
+.env
+*.pem
