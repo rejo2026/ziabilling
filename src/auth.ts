@@ -10,6 +10,11 @@ export function getAuthToken() {
   return authToken;
 }
 
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn;
+}
+
 export function installAuthFetch() {
   const original = window.fetch.bind(window);
   window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
@@ -17,7 +22,11 @@ export function installAuthFetch() {
     if (authToken && url.startsWith('http://localhost:4200/')) {
       const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
       if (!headers.has('Authorization')) headers.set('Authorization', `Bearer ${authToken}`);
-      return original(input, { ...init, headers });
+      return original(input, { ...init, headers }).then(res => {
+        // Session expired or server restarted: go back to the login screen.
+        if (res.status === 401 && onUnauthorized && !url.includes('/auth/login')) onUnauthorized();
+        return res;
+      });
     }
     return original(input, init);
   };

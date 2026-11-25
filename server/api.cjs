@@ -970,7 +970,9 @@ async function createApiRouter(options = {}) {
   }
 
   // Authentication, roles & user management (must come before the legacy routers)
-  router.use(createAuthRouter({ state, persist, logAudit }));
+  const authRouter = createAuthRouter({ state, persist, logAudit });
+  router.use(authRouter);
+  router.use(authRouter.guard); // every route below requires a signed-in user with the right role
 
   // Attach UAE Automotive Spare Parts ERP Sub-Router
   router.use(createUaeErpRouter({

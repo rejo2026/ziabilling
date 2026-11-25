@@ -377,6 +377,75 @@ function createAuthRouter({ state, persist, logAudit }) {
     res.json({ success: true });
   });
 
+  // ---------- server-side access control for every other API route ----------
+  // Needed before sign-in (login page, public website lead capture).
+  const PUBLIC_ROUTES = [
+    ['GET', '/branches'],
+    ['GET', '/settings/theme'],
+    ['GET', '/settings/login-designer'],
+    ['GET', '/license/system-id'],
+    ['POST', '/auth/forgot-password'],
+    ['POST', '/lead-generation/track-visitor'],
+    ['POST', '/lead-generation/leads']
+  ];
+
+  // Which sidebar areas a role needs to be able to call each API group.
+  // 'ANY' = every signed-in user, 'ADMIN' = administrators only,
+  // { readAny, tabs } = anyone may read; writes need one of `tabs` (none = admin only).
+  const ROUTE_RULES = {
+    '/dashboard': 'ANY',
+    '/auth': 'ANY',
+    '/products': ['products', 'auto_catalogue', 'inventory', 'pos', 'purchases', 'sales'],
+    '/catalog': ['auto_catalogue', 'products', 'inventory', 'pos', 'sales'],
+    '/barcode': ['auto_catalogue', 'products', 'inventory', 'pos', 'sales'],
+    '/vehicles': ['auto_catalogue', 'products', 'inventory', 'pos', 'sales'],
+    '/inventory': ['inventory'],
+    '/stn': ['inventory'],
+    '/invoices': ['sales', 'pos'],
+    '/sales': ['sales', 'pos'],
+    '/quotations': ['sales', 'pos'],
+    '/pos': ['pos', 'cash_register'],
+    '/customers': ['customers', 'pos', 'sales'],
+    '/suppliers': ['suppliers', 'purchases'],
+    '/purchases': ['purchases'],
+    '/expenses': ['expenses'],
+    '/reports': ['reports'],
+    '/accounting': ['reports'],
+    '/etax': ['vat_201', 'sales', 'pos'],
+    '/subscriptions': ['subscriptions'],
+    '/service': ['auto_catalogue', 'inventory', 'sales'],
+    '/branches': { readAny: true, tabs: ['branches'] },
+    '/settings': { readAny: true, tabs: [] },
+    '/localization': { readAny: true, tabs: [] }
+    // everything else (admin, roles, entitlements, backup, security, license,
+    // marketing, communications, lead-generation, unknown) is administrators only
+  };
+
+  function roleMayCall(user, method, path) {
+    if (user.roleKey === 'SUPER_ADMIN') return true;
+    const prefix = '/' + (path.split('/')[1] || '');
+    const rule = ROUTE_RULES[prefix];
+    if (rule === undefined || rule === 'ADMIN') return false;
+    if (rule === 'ANY') return true;
+    const tabs = tabsForRole(user.roleKey);
+    if (Array.isArray(rule)) return tabs === '*' || rule.some(t => tabs.includes(t));
+    if (rule.readAny && method === 'GET') return true;
+    return tabs === '*' || rule.tabs.some(t => tabs.includes(t));
+  }
+
+  router.guard = function apiGuard(req, res, next) {
+    if (req.method === 'OPTIONS') return next();
+    const path = req.path;
+    if (PUBLIC_ROUTES.some(([m, p]) => m === req.method && p === path)) return next();
+    const auth = readUser(req);
+    if (!auth) return res.status(401).json({ error: 'Please sign in to continue.' });
+    req.authUser = auth.user;
+    if (!roleMayCall(auth.user, req.method, path)) {
+      return res.status(403).json({ error: 'Your role does not have access to this.' });
+    }
+    next();
+  };
+
   return router;
 }
 

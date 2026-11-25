@@ -42,7 +42,7 @@ import AdminControlHub from './pages/AdminControlHub';
 import SubscriptionsPage from './pages/SubscriptionsPage';
 import LoginPage from './pages/LoginPage';
 import ChangePasswordModal from './components/ChangePasswordModal';
-import { setAuthToken, canOpenTab } from './auth';
+import { setAuthToken, canOpenTab, setUnauthorizedHandler } from './auth';
 import AutoCataloguePage from './pages/AutoCataloguePage';
 import BranchManagementPage from './pages/BranchManagementPage';
 import UaeVat201Page from './pages/UaeVat201Page';
@@ -173,7 +173,7 @@ export default function App() {
       .then(d => { setSystemId(d.systemId); setIsActivated(d.activated); setLicenseData(d.license); })
       .catch(() => setSystemId('ZB-9F82-4C1A-8E23'));
 
-    fetch('http://localhost:4200/api/dashboard/stats').then(r => r.json()).then(d => setDashboardStats(d)).catch(() => {});
+    fetch('http://localhost:4200/api/dashboard/stats').then(r => r.json()).then(d => d && !d.error && setDashboardStats(d)).catch(() => {});
     fetch('http://localhost:4200/api/products').then(r => r.json()).then(d => Array.isArray(d) && setProducts(d)).catch(() => {});
     fetch('http://localhost:4200/api/products/categories').then(r => r.json()).then(d => Array.isArray(d) && setCategories(d)).catch(() => {});
     fetch('http://localhost:4200/api/products/brands').then(r => r.json()).then(d => Array.isArray(d) && setBrands(d)).catch(() => {});
@@ -190,8 +190,8 @@ export default function App() {
     fetch('http://localhost:4200/api/purchases').then(r => r.json()).then(d => Array.isArray(d) && setPurchases(d)).catch(() => {});
     fetch('http://localhost:4200/api/expenses').then(r => r.json()).then(d => Array.isArray(d) && setExpenses(d)).catch(() => {});
     fetch('http://localhost:4200/api/expenses/categories').then(r => r.json()).then(d => Array.isArray(d) && setExpenseCategories(d)).catch(() => {});
-    fetch('http://localhost:4200/api/reports/summary').then(r => r.json()).then(d => setReports(d)).catch(() => {});
-    fetch('http://localhost:4200/api/settings/company').then(r => r.json()).then(d => setCompanySettings(d)).catch(() => {});
+    fetch('http://localhost:4200/api/reports/summary').then(r => r.json()).then(d => d && !d.error && setReports(d)).catch(() => {});
+    fetch('http://localhost:4200/api/settings/company').then(r => r.json()).then(d => d && !d.error && setCompanySettings(d)).catch(() => {});
     fetch('http://localhost:4200/api/users').then(r => r.json()).then(d => Array.isArray(d) && setUsers(d)).catch(() => {});
     fetch('http://localhost:4200/api/branches').then(r => r.json()).then(d => Array.isArray(d) && setBranches(d)).catch(() => {});
     fetch('http://localhost:4200/api/settings/theme').then(r => r.json()).then(d => d && setThemeTokens(d)).catch(() => {});
@@ -200,6 +200,16 @@ export default function App() {
 
   useEffect(() => {
     loadAllData();
+  }, []);
+
+  // Reload everything once signed in (the first load happens before login and only gets public data).
+  useEffect(() => {
+    if (session?.token) loadAllData();
+  }, [session?.token]);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => { setAuthToken(null); setSession(null); setActiveTab('dashboard'); });
+    return () => setUnauthorizedHandler(null);
   }, []);
 
   // --- Handlers: POS Quick Billing ---
