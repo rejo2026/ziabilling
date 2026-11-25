@@ -123,6 +123,8 @@ export interface Customer {
   group: 'Retail' | 'Wholesale' | 'VIP';
   outstandingBalance: number;
   creditLimit: number;
+  loyaltyPoints?: number;
+  createdAt?: string;
 }
 
 export interface Supplier {

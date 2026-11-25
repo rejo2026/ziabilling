@@ -78,7 +78,7 @@ export default function SalesPage({ invoices, products, customers, onRefresh, on
       'Due Date': fmtDate(inv.dueDate),
       'Payment Mode': inv.paymentMethod || 'Cash',
       'Subtotal': fmtCurrency(inv.subtotal),
-      'Tax': fmtCurrency(inv.taxAmount),
+      'Tax': fmtCurrency(inv.tax),
       'Discount': fmtCurrency(inv.discount),
       'Total': fmtCurrency(inv.total),
       'Status': inv.status,

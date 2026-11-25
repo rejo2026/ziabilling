@@ -23,10 +23,10 @@ export default function DynamicFieldManagerPage({ isRTL }: DynamicFieldManagerPr
   const [selectedEntity, setSelectedEntity] = useState<'products' | 'customers' | 'invoices' | 'suppliers'>('products');
 
   const [newField, setNewField] = useState({
-    targetEntity: 'products' as const,
+    targetEntity: 'products' as 'products' | 'customers' | 'invoices' | 'suppliers',
     fieldKey: '',
     fieldLabel: '',
-    fieldType: 'text' as const,
+    fieldType: 'text' as DynamicCustomField['fieldType'],
     isRequired: false,
     isVisible: true,
     optionsText: ''

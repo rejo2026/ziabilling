@@ -27,7 +27,6 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@rollup/rollup-win32-x64-msvc": "^4.34.8",
     "@tailwindcss/vite": "^4.0.6",
     "@types/node": "^22.13.1",
     "@types/react": "^19.0.8",
@@ -71,5 +70,8 @@
       "shortcutName": "Zia-Billing",
       "artifactName": "Zia-Billing-Setup-${version}.${ext}"
     }
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.34.8"
   }
 }
