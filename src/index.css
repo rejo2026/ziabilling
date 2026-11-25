@@ -1,1 +1,71 @@
 @import "tailwindcss";
+
+/*
+  Zia-Billing palette
+  Steel-graphite neutrals (replaces the default blue-tinted slate) and a single
+  cool cyan accent (replaces the default bright blue). Every existing
+  slate-* / blue-* class in the app picks these up automatically.
+*/
+@theme {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Inter", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+
+  --color-slate-50: #f4f6f8;
+  --color-slate-100: #e8ecf0;
+  --color-slate-200: #d3dae2;
+  --color-slate-300: #b3bdc9;
+  --color-slate-400: #8b97a7;
+  --color-slate-500: #7a8798;
+  --color-slate-600: #4a5566;
+  --color-slate-700: #343d4b;
+  --color-slate-800: #232a35;
+  --color-slate-900: #181d26;
+  --color-slate-950: #0f1319;
+
+  --color-blue-50: #ecfafd;
+  --color-blue-100: #d2f1f8;
+  --color-blue-200: #a9e2f0;
+  --color-blue-300: #7fd6e8;
+  --color-blue-400: #4cc2dd;
+  --color-blue-500: #1fa8c9;
+  --color-blue-600: #0b7a9c;
+  --color-blue-700: #086583;
+  --color-blue-800: #0a5068;
+  --color-blue-900: #0c3d4f;
+  --color-blue-950: #082a37;
+
+  /* admin screens used indigo; keep them on the same accent */
+  --color-indigo-50: var(--color-blue-50);
+  --color-indigo-100: var(--color-blue-100);
+  --color-indigo-200: var(--color-blue-200);
+  --color-indigo-300: var(--color-blue-300);
+  --color-indigo-400: var(--color-blue-400);
+  --color-indigo-500: var(--color-blue-500);
+  --color-indigo-600: var(--color-blue-600);
+  --color-indigo-700: var(--color-blue-700);
+  --color-indigo-800: var(--color-blue-800);
+  --color-indigo-900: var(--color-blue-900);
+  --color-indigo-950: var(--color-blue-950);
+}
+
+html {
+  font-feature-settings: "tnum" 1, "cv11" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* keyboard focus is always visible */
+:focus-visible {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes rotor-spin {
+  to { transform: rotate(360deg); }
+}

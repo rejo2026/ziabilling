@@ -470,7 +470,7 @@ export default function App() {
       <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col select-none">
         {/* Brand Header */}
         <div className="p-4 flex items-center gap-3 border-b border-slate-800 bg-slate-950">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-600 flex items-center justify-center font-black text-xl text-white shadow-lg shadow-blue-900/50">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-xl text-white">
             Z
           </div>
           <div>
@@ -500,7 +500,7 @@ export default function App() {
 
         {/* Navigation Modules List */}
         <nav className="flex-1 px-2.5 space-y-0.5 overflow-y-auto text-xs">
-          <div className="text-[10px] font-bold text-slate-500 uppercase px-2.5 pt-2 pb-1">
+          <div className="text-[11px] font-semibold text-slate-500 px-2.5 pt-3 pb-1">
             {isRTL ? 'العمليات ونقطة البيع' : 'Core & Counter Operations'}
           </div>
           
