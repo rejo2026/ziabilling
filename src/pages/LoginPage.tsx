@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Lock, 
@@ -27,15 +27,21 @@ export default function LoginPage({
   currentLang,
   onLanguageChange
 }: LoginPageProps) {
-  const [username, setUsername] = useState('admin@zia.local');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [selectedBranch, setSelectedBranch] = useState(branches[0]?.id || 'BR-DXB-01');
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showForgot, setShowForgot] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetSent, setResetSent] = useState(false);
+  const [defaultAdminActive, setDefaultAdminActive] = useState(false);
+
+  useEffect(() => {
+    fetch('http://localhost:4200/api/auth/bootstrap-status')
+      .then(r => r.json())
+      .then(d => setDefaultAdminActive(!!d.defaultAdminPasswordUnchanged))
+      .catch(() => {});
+  }, []);
 
   const isRTL = currentLang === 'ar';
 
@@ -74,21 +80,6 @@ export default function LoginPage({
       setErrorMsg('Cannot connect to local ERP backend server at port 4200.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resetEmail) return;
-    try {
-      await fetch('http://localhost:4200/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetEmail })
-      });
-      setResetSent(true);
-    } catch (e) {
-      setResetSent(true);
     }
   };
 
@@ -152,7 +143,7 @@ export default function LoginPage({
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  {isRTL ? 'اسم المستخدم أو البريد الإلكتروني' : 'Username / Email'}
+                  {isRTL ? 'اسم المستخدم' : 'Username'}
                 </label>
                 <div className="relative">
                   <User className={`w-4 h-4 text-slate-400 absolute top-3 ${isRTL ? 'right-3' : 'left-3'}`} />
@@ -161,7 +152,8 @@ export default function LoginPage({
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="admin@zia.local"
+                    placeholder="username"
+                    autoComplete="username"
                     className={`w-full bg-slate-950 border border-slate-700/80 rounded-xl py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-all ${isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
                   />
                 </div>
@@ -188,6 +180,7 @@ export default function LoginPage({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    autoComplete="current-password"
                     className={`w-full bg-slate-950 border border-slate-700/80 rounded-xl py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-all ${isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
                   />
                 </div>
@@ -251,60 +244,28 @@ export default function LoginPage({
                 )}
               </button>
             </form>
+
+            {defaultAdminActive && (
+              <div className="mt-5 p-3 bg-amber-950/40 border border-amber-800/50 rounded-xl text-xs text-amber-200">
+                <p className="font-semibold mb-0.5">First time here?</p>
+                <p>Sign in as <span className="font-mono text-white">admin</span> with password <span className="font-mono text-white">admin123</span>. You will be asked to choose your own password right away.</p>
+              </div>
+            )}
           </div>
         ) : (
           <div>
-            <h2 className="text-2xl font-bold text-white mb-2">{isRTL ? 'استعادة كلمة المرور' : 'Password Recovery'}</h2>
-            <p className="text-xs text-slate-400 mb-6">
-              {isRTL ? 'أدخل بريدك الإلكتروني المسجل لإرسال رابط إعادة التعيين.' : 'Enter your registered corporate email to receive a password reset token.'}
+            <h2 className="text-2xl font-bold text-white mb-2">{isRTL ? 'استعادة كلمة المرور' : 'Forgot your password?'}</h2>
+            <p className="text-xs text-slate-300 mb-6">
+              {isRTL
+                ? 'يقوم المسؤول بإعادة تعيين كلمات المرور. اطلب منه إعادة تعيين كلمة مرورك ثم سجّل الدخول بكلمة المرور المؤقتة.'
+                : 'Passwords are reset by your administrator. Ask them to set a temporary password for you in Admin Hub → Users, then sign in and choose your own.'}
             </p>
-
-            {resetSent ? (
-              <div className="p-4 bg-emerald-950/60 border border-emerald-800/60 rounded-xl text-center space-y-3">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-                <p className="text-xs text-emerald-300">
-                  {isRTL ? 'تم إرسال رابط إعادة التعيين بنجاح.' : 'Password reset link dispatched. Please inspect your inbox.'}
-                </p>
-                <button
-                  onClick={() => { setShowForgot(false); setResetSent(false); }}
-                  className="text-xs font-bold text-emerald-400 hover:underline"
-                >
-                  {isRTL ? 'العودة لتسجيل الدخول' : 'Return to Login'}
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                    {isRTL ? 'البريد الإلكتروني' : 'Corporate Email'}
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="user@alfuttaim-autoparts.ae"
-                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl py-2.5 px-3 text-sm text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowForgot(false)}
-                    className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors"
-                  >
-                    {isRTL ? 'إلغاء' : 'Cancel'}
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors"
-                  >
-                    {isRTL ? 'إرسال الرابط' : 'Send Reset Link'}
-                  </button>
-                </div>
-              </form>
-            )}
+            <button
+              onClick={() => setShowForgot(false)}
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors"
+            >
+              {isRTL ? 'العودة لتسجيل الدخول' : 'Back to sign in'}
+            </button>
           </div>
         )}
       </div>

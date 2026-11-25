@@ -51,6 +51,46 @@ export default function AdminControlHub() {
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
   const [newRoleForm, setNewRoleForm] = useState({ roleKey: '', displayName: '', permissions: { pos: ['create', 'read'], inventory: ['read'] } });
 
+  // Login (user account) management
+  const emptyUserForm = { name: '', username: '', password: '', roleKey: 'CASHIER', branchId: '', email: '', phone: '', pinCode: '' };
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [userForm, setUserForm] = useState(emptyUserForm);
+  const [resetUserId, setResetUserId] = useState<string | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    const bytes = crypto.getRandomValues(new Uint32Array(10));
+    return Array.from(bytes, b => chars[b % chars.length]).join('');
+  };
+
+  const callUserApi = async (method: string, path: string, body?: unknown, okText?: string) => {
+    try {
+      const res = await fetch(`http://localhost:4200/api${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAlertMsg({ type: 'error', text: data.error || 'Request failed' });
+        return false;
+      }
+      if (okText) setAlertMsg({ type: 'success', text: okText });
+      await loadAdminData();
+      return true;
+    } catch (err: any) {
+      setAlertMsg({ type: 'error', text: err.message });
+      return false;
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ok = await callUserApi('POST', '/users', userForm, `Login "${userForm.username}" created. Share the temporary password with them; they will be asked to change it at first sign-in.`);
+    if (ok) { setUserForm(emptyUserForm); setShowAddUser(false); }
+  };
+
   // Load All Admin Configurations
   const loadAdminData = async () => {
     setLoading(true);
@@ -221,7 +261,7 @@ export default function AdminControlHub() {
           onClick={() => setActiveAdminSubTab('users')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${activeAdminSubTab === 'users' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:bg-slate-900'}`}
         >
-          <Users size={14} /> 3. Users & Cashiers ({users.length})
+          <Users size={14} /> 3. Users & Logins ({users.length})
         </button>
         <button
           onClick={() => setActiveAdminSubTab('branches')}
@@ -359,44 +399,127 @@ export default function AdminControlHub() {
         </div>
       )}
 
-      {/* SUB-TAB 3: USERS & CASHIERS */}
+      {/* SUB-TAB 3: USERS & LOGINS */}
       {activeAdminSubTab === 'users' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-white">System Users & POS Cashier Counter Roster</h3>
-              <p className="text-xs text-slate-400">Assign users to physical store branches, assign RBAC roles, and set supervisor PIN codes.</p>
+              <h3 className="text-sm font-bold text-white">User Logins & Roles</h3>
+              <p className="text-xs text-slate-400">Create a login for each staff member, choose what they can access, and reset or disable it at any time.</p>
             </div>
+            <button
+              onClick={() => { setShowAddUser(v => !v); setUserForm({ ...emptyUserForm, branchId: branches[0]?.id || '' }); }}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold"
+            >
+              <Plus size={14} /> {showAddUser ? 'Close' : 'New Login'}
+            </button>
           </div>
+
+          {showAddUser && (
+            <form onSubmit={handleCreateUser} className="p-4 rounded-xl bg-slate-900 border border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <label className="space-y-1"><span className="text-slate-400">Full name *</span>
+                <input required value={userForm.name} onChange={e => setUserForm({ ...userForm, name: e.target.value })} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+              </label>
+              <label className="space-y-1"><span className="text-slate-400">Username * (used to sign in)</span>
+                <input required value={userForm.username} onChange={e => setUserForm({ ...userForm, username: e.target.value })} pattern="[A-Za-z0-9._@\-]{3,40}" title="3-40 characters: letters, numbers, . _ @ -" autoComplete="off" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+              </label>
+              <label className="space-y-1"><span className="text-slate-400">Temporary password * (min 8)</span>
+                <div className="flex gap-1.5">
+                  <input required minLength={8} value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} autoComplete="off" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+                  <button type="button" onClick={() => setUserForm({ ...userForm, password: generatePassword() })} className="px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 whitespace-nowrap">Generate</button>
+                </div>
+              </label>
+              <label className="space-y-1"><span className="text-slate-400">Role *</span>
+                <select value={userForm.roleKey} onChange={e => setUserForm({ ...userForm, roleKey: e.target.value })} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white">
+                  {roles.map(r => <option key={r.roleKey} value={r.roleKey}>{r.displayName}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1"><span className="text-slate-400">Branch</span>
+                <select value={userForm.branchId} onChange={e => setUserForm({ ...userForm, branchId: e.target.value })} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white">
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1"><span className="text-slate-400">Supervisor PIN (4-6 digits, optional)</span>
+                <input value={userForm.pinCode} onChange={e => setUserForm({ ...userForm, pinCode: e.target.value })} pattern="\d{4,6}" title="4-6 digits" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+              </label>
+              <label className="space-y-1"><span className="text-slate-400">Email</span>
+                <input type="email" value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+              </label>
+              <label className="space-y-1"><span className="text-slate-400">Phone</span>
+                <input value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+              </label>
+              <div className="flex items-end">
+                <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-semibold">Create login</button>
+              </div>
+            </form>
+          )}
 
           <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900">
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
                 <tr>
-                  <th className="p-3">User ID</th>
-                  <th className="p-3">Full Name</th>
-                  <th className="p-3">Role Authority</th>
-                  <th className="p-3">Assigned Branch</th>
-                  <th className="p-3">Contact Email/Phone</th>
-                  <th className="p-3">Supervisor PIN</th>
+                  <th className="p-3">Name</th>
+                  <th className="p-3">Username</th>
+                  <th className="p-3">Role</th>
+                  <th className="p-3">Branch</th>
+                  <th className="p-3">Contact</th>
                   <th className="p-3">Status</th>
+                  <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {users.map(u => (
-                  <tr key={u.id} className="hover:bg-slate-850">
-                    <td className="p-3 font-mono text-indigo-400 font-semibold">{u.id}</td>
-                    <td className="p-3 font-bold text-white">{u.name}</td>
-                    <td className="p-3"><span className="bg-slate-800 px-2 py-0.5 rounded text-slate-200">{u.role}</span></td>
-                    <td className="p-3 text-slate-300">{u.branchName || 'Head Office'}</td>
-                    <td className="p-3 text-slate-400">{u.email}<br/><span className="text-[10px] text-slate-500">{u.phone}</span></td>
-                    <td className="p-3 font-mono text-amber-400">{u.pinCode ? '•••• (' + u.pinCode + ')' : 'None'}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                        {u.active ? 'ACTIVE' : 'INACTIVE'}
-                      </span>
-                    </td>
-                  </tr>
+                  <React.Fragment key={u.id}>
+                    <tr className="hover:bg-slate-850">
+                      <td className="p-3 font-bold text-white">{u.name}<div className="font-mono text-[10px] text-slate-500 font-normal">{u.id}</div></td>
+                      <td className="p-3 font-mono text-indigo-300">{u.username || <span className="text-slate-500">no login</span>}</td>
+                      <td className="p-3"><span className="bg-slate-800 px-2 py-0.5 rounded text-slate-200">{u.role}</span></td>
+                      <td className="p-3 text-slate-300">{u.branchName || 'Head Office'}</td>
+                      <td className="p-3 text-slate-400">{u.email}<br /><span className="text-[10px] text-slate-500">{u.phone}</span></td>
+                      <td className="p-3 space-y-1">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                          {u.active ? 'ACTIVE' : 'DISABLED'}
+                        </span>
+                        {!u.hasPassword && <div className="text-[10px] text-amber-400">cannot sign in yet</div>}
+                        {u.hasPassword && u.mustChangePassword && <div className="text-[10px] text-amber-400">temp password</div>}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex justify-end gap-1.5">
+                          <button onClick={() => { setResetUserId(resetUserId === u.id ? null : u.id); setResetPassword(''); }} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">
+                            {u.hasPassword ? 'Reset password' : 'Set login'}
+                          </button>
+                          <button onClick={() => callUserApi('PUT', `/users/${u.id}`, { active: !u.active }, u.active ? `${u.name} disabled.` : `${u.name} enabled.`)} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">
+                            {u.active ? 'Disable' : 'Enable'}
+                          </button>
+                          <button onClick={() => { if (window.confirm(`Delete the login for ${u.name}? This cannot be undone.`)) callUserApi('DELETE', `/users/${u.id}`, undefined, `${u.name} deleted.`); }} className="px-2 py-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300" title="Delete user">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {resetUserId === u.id && (
+                      <tr className="bg-slate-950/60">
+                        <td colSpan={7} className="p-3">
+                          <form
+                            onSubmit={async (e) => {
+                              e.preventDefault();
+                              const body: any = { password: resetPassword };
+                              if (!u.username) body.username = u.email ? u.email.split('@')[0] : u.name.toLowerCase().replace(/\s+/g, '.');
+                              const ok = await callUserApi('PUT', `/users/${u.id}`, body, `Temporary password set for ${u.name}. They must change it at next sign-in.`);
+                              if (ok) { setResetUserId(null); setResetPassword(''); }
+                            }}
+                            className="flex flex-wrap items-center gap-2"
+                          >
+                            <span className="text-slate-400">New temporary password for {u.name}:</span>
+                            <input required minLength={8} value={resetPassword} onChange={e => setResetPassword(e.target.value)} autoComplete="off" className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono" />
+                            <button type="button" onClick={() => setResetPassword(generatePassword())} className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">Generate</button>
+                            <button type="submit" className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Save</button>
+                            <button type="button" onClick={() => setResetUserId(null)} className="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white">Cancel</button>
+                          </form>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

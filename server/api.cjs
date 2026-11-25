@@ -6,6 +6,7 @@ const { openDb, loadState, isDbEmpty, makePersist, makeNextId, seedCounterFromLe
 const { migrateLegacyJson } = require('./migrate-legacy-json.cjs');
 const { getGateway } = require('./payments/gateway.cjs');
 const { createUaeErpRouter } = require('./uae-erp-router.cjs');
+const { createAuthRouter } = require('./auth.cjs');
 
 async function createApiRouter(options = {}) {
   const router = express.Router();
@@ -967,6 +968,9 @@ async function createApiRouter(options = {}) {
     if (state.auditLogs.length > 500) state.auditLogs.pop();
     persist();
   }
+
+  // Authentication, roles & user management (must come before the legacy routers)
+  router.use(createAuthRouter({ state, persist, logAudit }));
 
   // Attach UAE Automotive Spare Parts ERP Sub-Router
   router.use(createUaeErpRouter({
@@ -3312,6 +3316,9 @@ async function createApiRouter(options = {}) {
   // Supervisor Price Override Verification
   router.post('/auth/supervisor-override', (req, res) => {
     const { supervisorPin, requestedDiscount, cashierId } = req.body;
+    if (!String(supervisorPin || '').trim()) {
+      return res.status(403).json({ success: false, error: 'Invalid Supervisor Authorization PIN' });
+    }
     // Check if PIN matches an Admin or Branch Manager
     const supervisor = state.users.find(
       u => u.pinCode === String(supervisorPin).trim() && (u.roleKey === 'SUPER_ADMIN' || u.roleKey === 'BRANCH_MGR' || u.role === 'Admin')

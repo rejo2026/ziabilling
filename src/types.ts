@@ -330,6 +330,10 @@ export interface UserRole {
 export interface SystemUser {
   id: string;
   name: string;
+  username?: string;
+  roleKey?: string;
+  hasPassword?: boolean;
+  mustChangePassword?: boolean;
   role: string;
   roleId?: string;
   email: string;

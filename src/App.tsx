@@ -41,6 +41,8 @@ import {
 import AdminControlHub from './pages/AdminControlHub';
 import SubscriptionsPage from './pages/SubscriptionsPage';
 import LoginPage from './pages/LoginPage';
+import ChangePasswordModal from './components/ChangePasswordModal';
+import { setAuthToken, canOpenTab } from './auth';
 import AutoCataloguePage from './pages/AutoCataloguePage';
 import BranchManagementPage from './pages/BranchManagementPage';
 import UaeVat201Page from './pages/UaeVat201Page';
@@ -52,10 +54,30 @@ import { TRANSLATIONS } from './localization';
 
 export default function App() {
   const [session, setSession] = useState<any | null>(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+
+  const allowedTabs = session?.permissions?.tabs;
+  const can = (tab: string) => canOpenTab(allowedTabs, tab);
+
   const [currentLang, setCurrentLang] = useState<'en' | 'ar'>('en');
   const [themeTokens, setThemeTokens] = useState<any>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+
+  const handleLogout = () => {
+    const token = session?.token;
+    if (token) {
+      fetch('http://localhost:4200/api/auth/logout', { method: 'POST' }).catch(() => {});
+    }
+    setAuthToken(null);
+    setSession(null);
+    setActiveTab('dashboard');
+  };
+
+  // If the current page is not allowed for this role, fall back to the dashboard.
+  useEffect(() => {
+    if (session && !can(activeTab)) setActiveTab('dashboard');
+  }, [session, activeTab]);
   const [systemId, setSystemId] = useState('ZB-CALCULATING...');
   const [isActivated, setIsActivated] = useState(false);
   const [licenseData, setLicenseData] = useState<any>(null);
@@ -421,7 +443,7 @@ export default function App() {
   if (!session) {
     return (
       <LoginPage
-        onLoginSuccess={(s) => setSession(s)}
+        onLoginSuccess={(s) => { setAuthToken(s.token); setSession(s); setActiveTab('dashboard'); }}
         branches={branches}
         currentLang={currentLang}
         onLanguageChange={(l) => setCurrentLang(l as any)}
@@ -472,14 +494,17 @@ export default function App() {
             {isRTL ? 'العمليات ونقطة البيع' : 'Core & Counter Operations'}
           </div>
           
-          <button 
+          {can('dashboard') && (
+<button 
             onClick={() => setActiveTab('dashboard')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'dashboard' ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <LayoutDashboard size={16} /> {t.dashboard}
           </button>
+)}
 
-          <button 
+          {can('pos') && (
+<button 
             onClick={() => setActiveTab('pos')}
             className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${activeTab === 'pos' ? 'bg-emerald-600 text-white font-semibold shadow-md shadow-emerald-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
@@ -488,125 +513,170 @@ export default function App() {
               <span className="bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]">{heldBills.length}</span>
             )}
           </button>
+)}
 
-          <button 
+          {can('auto_catalogue') && (
+<button 
             onClick={() => setActiveTab('auto_catalogue')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'auto_catalogue' ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Boxes size={16} /> {t.spareParts}
           </button>
+)}
 
-          <button 
+          {can('sales') && (
+<button 
             onClick={() => setActiveTab('sales')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'sales' ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Receipt size={16} /> {t.invoices}
           </button>
+)}
 
-          <button 
+          {can('cash_register') && (
+<button 
             onClick={() => setActiveTab('cash_register')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'cash_register' ? 'bg-emerald-600 text-white font-semibold shadow-md shadow-emerald-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <DollarSign size={16} /> {t.cashRegister}
           </button>
+)}
 
-          <button 
+          {can('returns') && (
+<button 
             onClick={() => setActiveTab('returns')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'returns' ? 'bg-amber-600 text-white font-semibold shadow-md shadow-amber-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <RotateCcw size={16} /> {t.salesReturns}
           </button>
+)}
 
           <div className="text-[10px] font-bold text-slate-500 uppercase px-2.5 pt-3 pb-1">
             {isRTL ? 'المشتريات والموردين' : 'Purchasing & Vendors'}
           </div>
 
-          <button
+          {can('purchases') && (
+<button
             onClick={() => setActiveTab('purchases')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'purchases' ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Truck size={16} /> {t.purchases}
           </button>
+)}
 
-          <button 
+          {can('suppliers') && (
+<button 
             onClick={() => setActiveTab('suppliers')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'suppliers' ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Building2 size={16} /> {t.suppliers}
           </button>
+)}
 
-          <button 
+          {can('customers') && (
+<button 
             onClick={() => setActiveTab('customers')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'customers' ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Users size={16} /> {t.customers}
           </button>
+)}
 
           <div className="text-[10px] font-bold text-slate-500 uppercase px-2.5 pt-3 pb-1">
             {isRTL ? 'الامتثال والضرائب والإدارة' : 'UAE VAT & System Administration'}
           </div>
 
-          <button 
+          {can('vat_201') && (
+<button 
             onClick={() => setActiveTab('vat_201')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'vat_201' ? 'bg-emerald-600 text-white font-semibold shadow-md shadow-emerald-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <FileText size={16} /> {t.vatReport}
           </button>
+)}
 
-          <button 
+          {can('branches') && (
+<button 
             onClick={() => setActiveTab('branches')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'branches' ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Building2 size={16} /> {isRTL ? 'شبكة الفروع والمستودعات' : 'Branches & Warehouses'}
           </button>
+)}
 
-          <button 
+          {can('dynamic_fields') && (
+<button 
             onClick={() => setActiveTab('dynamic_fields')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'dynamic_fields' ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Sliders size={16} /> {t.fieldsAdmin}
           </button>
+)}
 
-          <button 
+          {can('theme_settings') && (
+<button 
             onClick={() => setActiveTab('theme_settings')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'theme_settings' ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Sliders size={16} /> {t.themeAdmin}
           </button>
+)}
 
-          <button 
+          {can('admin_hub') && (
+<button 
             onClick={() => setActiveTab('admin_hub')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'admin_hub' ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Sliders size={16} /> {t.modulesAdmin}
           </button>
+)}
 
-          <button 
+          {can('reports') && (
+<button 
             onClick={() => setActiveTab('reports')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'reports' ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <TrendingUp size={16} /> {t.reports}
           </button>
+)}
 
-          <button 
+          {can('settings') && (
+<button 
             onClick={() => setActiveTab('settings')}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${activeTab === 'settings' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-300 hover:bg-slate-900'}`}
           >
             <Settings size={16} /> {t.settings}
           </button>
+)}
         </nav>
 
         {/* Footer Active Cashier */}
         <div className="p-3 border-t border-slate-800 text-[11px] flex items-center justify-between text-slate-400 bg-slate-950">
           <div>
-            <p className="font-semibold text-slate-300">Admin Manager</p>
-            <p className="text-[10px] text-emerald-400">Shift Active</p>
+            <p className="font-semibold text-slate-300">{session?.user?.name}</p>
+            <p className="text-[10px] text-emerald-400">{session?.user?.role}</p>
           </div>
-          <button onClick={loadAllData} title="Sync / Refresh All" className="p-1 hover:text-white">
-            <RefreshCw size={14} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowChangePassword(true)} title="Change password" className="p-1 hover:text-white">
+              <KeyRound size={14} />
+            </button>
+            <button onClick={loadAllData} title="Sync / Refresh All" className="p-1 hover:text-white">
+              <RefreshCw size={14} />
+            </button>
+          </div>
         </div>
       </aside>
+
+      {(session?.mustChangePassword || showChangePassword) && (
+        <ChangePasswordModal
+          forced={!!session?.mustChangePassword}
+          onClose={() => setShowChangePassword(false)}
+          onChanged={() => {
+            setShowChangePassword(false);
+            setSession((prev: any) => (prev ? { ...prev, mustChangePassword: false } : prev));
+          }}
+        />
+      )}
 
       {/* 2. MAIN WORKSPACE */}
       <main className="flex-1 flex flex-col overflow-hidden bg-slate-900">
@@ -639,7 +709,7 @@ export default function App() {
             </button>
             <div className="h-4 w-px bg-slate-800" />
             <button
-              onClick={() => setSession(null)}
+              onClick={handleLogout}
               className="bg-rose-950/60 border border-rose-800 hover:bg-rose-900 px-2.5 py-1 rounded-lg text-rose-300 font-semibold cursor-pointer"
             >
               Logout
